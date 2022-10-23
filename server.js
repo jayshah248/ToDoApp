@@ -87,6 +87,24 @@ app.post("/findalltasks", authenticator, async (req, res) => {
   return res.json({status:'ok',data:response})
 })
 
+app.post("/findfinishedtasks", authenticator, async (req, res) => {
+
+  const response = await UserTask.find({
+    email: req.user.email,
+    status: "done"
+  })
+  return res.json({status:'ok',data:response})
+})
+
+app.post("/findactivetasks", authenticator, async (req, res) => {
+
+  const response = await UserTask.find({
+    email: req.user.email,
+    status: "inprogress"
+  })
+  return res.json({status:'ok',data:response})
+})
+
 app.post("/addtask", authenticator, async (req, res) => {
 
   email = req.user.email
@@ -210,7 +228,6 @@ app.post("/signup",async (req,res)=>{
   res.json({ status: 'ok' })
 
 })
-
 
 
 app.get('*', function(req, res){
