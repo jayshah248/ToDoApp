@@ -1,0 +1,69 @@
+<script>
+  if(localStorage.getItem('token'))
+  {
+    window.location.href = '/Dashboard'
+  }
+</script>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <link rel="stylesheet" href="css/style.css" />
+    <title>Login</title>
+  </head>
+  <body>
+    <div class="login-wrapper">
+      <form id="login-form" class="form">
+        <h2>Login</h2>
+        <div class="input-group">
+          <input type="text" name="email" id="email" required />
+          <label for="emmail">Email</label>
+        </div>
+        <div class="input-group">
+          <input
+            type="password"
+            name="pass"
+            id="pass"
+            required
+          />
+          <label for="loginPassword">Password</label>
+        </div>
+        <input type="submit" value="Login" class="submit-btn" />
+      </form>
+    </div>
+
+    <script>
+      const form = document.getElementById('login-form')
+      form.addEventListener('submit', loginUser)
+
+      async function loginUser(event){
+        event.preventDefault()
+        const email = document.getElementById('email').value
+        const password = document.getElementById('pass').value
+
+        const result = await fetch('/signin',{
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email,
+            password
+          })
+        }).then((res) => res.json())
+
+        console.log(result)
+        if(result.status === 'ok'){
+          //all good
+          console.log('Got the token: ', result.data)
+          localStorage.setItem('token', result.data)
+          window.location.href = '/Dashboard'
+        }else {
+          alert(result.error)
+        }
+      }
+    </script>
+  </body>
+</html>
