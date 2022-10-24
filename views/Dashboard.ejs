@@ -11,10 +11,9 @@
       })
     }).then((res) => res.json())
 
-    //console.log(result)
+
     if (result.status === 'ok') {
       //all good
-      //console.log('Got the token: ', result.data)
       document.getElementsByName('username').forEach(element => {
         element.innerHTML = result.data.username
       });
@@ -41,7 +40,7 @@
     document.getElementById('maincontainer').hidden = false;
     displayAllTasks()
     const form = document.getElementById('addtaskform')
-  form.addEventListener('submit', addtaskfunc)
+    form.addEventListener('submit', addtaskfunc)
   }
 
   function logout() {
@@ -49,68 +48,176 @@
     window.location.href = '/'
   }
 
-  function searchTask() {
+  // Table Generation -> start
 
-    alert("search function called")
+  async function mainCheck() {
+    checkboxeslist = await document.getElementsByName("taskcheckbox")
+    if (document.getElementById('maincheckbox').checked == true) {
+      checkboxeslist.forEach(async element => {
+        element.checked = true
+      })
+    }
+    else {
+      checkboxeslist.forEach(async element => {
+        element.checked = false
+      })
+    }
   }
 
-  function ActiveTasks() {
-    alert('active func')
+  function GenerateTable(result) {
+    if (document.getElementById('ttt')) {
+      document.getElementById('ttt').outerHTML = "";
+    }
+
+    var taskTable = document.createElement("table"), row, cell;
+    const tablehead = taskTable.createTHead()
+
+    headrow = tablehead.insertRow()
+    const headRowElements = ["<input" + " id=" + "maincheckbox" + " type=\"checkbox\" onclick=\"mainCheck()\">", "Task Name", "Task Status", "Task Option"]
+
+    for (let index = 0; index < headRowElements.length; index++) {
+
+      var headerCell = document.createElement("th")
+      headrow.appendChild(headerCell)
+      headerCell.innerHTML = headRowElements[index]
+    }
+
+
+    result.data.forEach(function (element) {
+      row = taskTable.insertRow()
+      row.setAttribute("id", element._id)
+      row.insertCell().innerHTML = "<input" + " id=" + element._id + +"\"" + " type=\"checkbox\" name=\"taskcheckbox\">";
+
+      Object.entries(element).forEach(entry => {
+        const [key, value] = entry
+        if (key == "task") {
+          cell = row.insertCell()
+          cell.innerHTML = value
+        }
+
+        else if (key == "status") {
+          cell = row.insertCell()
+          if (value == "unfinished") {
+            cell.innerHTML = "Not Started"
+            row.setAttribute("class", "table-danger")
+          }
+          else if (value == "inprogress") {
+            cell.innerHTML = "In progress"
+            row.setAttribute("class", "table-warning")
+          }
+          else if (value == "done") {
+            cell.innerHTML = "Done"
+            row.setAttribute("class", "table-success")
+          }
+
+        }
+      })
+      cell = row.insertCell()
+      cell.innerHTML = " <button type=\"button\" onClick=\"TaskButton('inprogress', '" + element._id + "')\" class=\"btn btn-outline-primary\"><i class=\"bi bi-play-fill\"></i></button> <button type=\"button\" onClick=\"TaskButton('done', '" + element._id + "')\" class=\"btn btn-outline-success\"><i class=\"bi bi-check-lg\"></i></button> <button type=\"button\" onClick=\"TaskButton('delete', '" + element._id + "')\" class=\"btn btn-outline-danger\"><i class=\"bi bi-trash-fill\"></i></button>"
+
+    })
+    taskTable.setAttribute("class", "table");
+    taskTable.setAttribute("id", "ttt");
+    tablehead.setAttribute("class", "thead-dark")
+    document.getElementById("taskstableContainer").appendChild(taskTable);
   }
 
-  function CompletedTasks() {
-    alert('comple func')
+  // Table Generation -> end
+
+
+  //Task Display Functionality -> start
+
+  async function searchTask() {
+
+    searchString = document.getElementById('searchbar').value
+    console.log(searchString)
+    const result = await fetch('/findSearchedTask', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token'),
+        search: searchString
+      })
+    }).then((res) => res.json())
+    GenerateTable(result)
+  }
+
+  async function ActiveTasks() {
+
+    const result = await fetch('/findactivetasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token')
+      })
+    }).then((res) => res.json())
+
+    GenerateTable(result)
+  }
+
+  async function CompletedTasks() {
+    const result = await fetch('/findfinishedtasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token')
+      })
+    }).then((res) => res.json())
+    GenerateTable(result)
   }
 
   function AllTasks() {
-    alert('all tas func')
+    displayAllTasks()
   }
+
+  //Task Display Functionality -> end
 
   //To add tasks -> start
-  
 
-  async function addtaskfunc(event){
+  async function addtaskfunc(event) {
     event.preventDefault()
     const taskNameObj = document.getElementById('taskName')
-    const taskDescObj = document.getElementById('taskDesc')
-    const taskName = taskNameObj.value
-    const taskDesc = taskDescObj.value
-    console.log(taskName,taskDesc)
 
-    const result = await fetch('/addtask',{
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              token: localStorage.getItem('token'),
-              taskn: taskName,
-              taskd: taskDesc
-            })
-          }).then((res) => res.json())
-      console.log(result)
-      taskDescObj.value = null
-      taskNameObj.value = null
-      $('#AddTaskModal').modal('toggle') 
-      displayAllTasks()
+    const taskName = taskNameObj.value
+
+    const result = await fetch('/addtask', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token'),
+        taskn: taskName,
+        taskd: null
+      })
+    }).then((res) => res.json())
+    taskNameObj.value = null
+    $('#AddTaskModal').modal('toggle')
+    displayAllTasks()
   }
+
+
   //To add tasks -> end
 
   //Start, End, Delete Tasks -> start
 
-  async function TaskButton(ltaskstatus, ltaskid)
-  {
-    console.log('task button pressed with parameters: ' +ltaskstatus+ltaskid)
-    const result = await fetch('/updateTask',{
+  async function TaskButton(ltaskstatus, ltaskid) {
+    const result = await fetch('/updateTask', {
       method: 'POST',
       headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              token: localStorage.getItem('token'),
-              updatestatus: ltaskstatus, //insert status here
-              taskid: ltaskid
-            })
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token'),
+        updatestatus: ltaskstatus, //insert status here
+        taskid: ltaskid
+      })
     }).then((res) => res.json())
 
     displayAllTasks()
@@ -120,87 +227,109 @@
 
   //To display all tasks -> start
 
-  async function displayAllTasks()
-  {
-    const result = await fetch('/findalltasks',{
+  async function displayAllTasks() {
+    const result = await fetch('/findalltasks', {
       method: 'POST',
       headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              token: localStorage.getItem('token')
-            })
-    }).then((res) => res.json())
-    console.log(result)
-    
-
-    if(document.getElementById('ttt'))
-    {
-      document.getElementById('ttt').outerHTML = "";
-    }
-    
-    var taskTable = document.createElement("table"), row, cell;
-    const tablehead = taskTable.createTHead()
-    
-    headrow = tablehead.insertRow()
-    const headRowElements = ["", "Task Name", "Task Status", "Task Option"]
-    
-    for (let index = 0; index < headRowElements.length; index++) {
-      
-      var headerCell = document.createElement("th")
-      headrow.appendChild(headerCell)
-      headerCell.innerHTML = headRowElements[index]      
-    }
-    
-
-    result.data.forEach(function(element) {
-      row = taskTable.insertRow()
-      row.setAttribute("id",element._id)
-      row.insertCell().innerHTML = "<input" +" id="+element._id+ +"\""+ " type=\"checkbox\" name=\"taskcheckbox\">";
-      
-      Object.entries(element).forEach(entry => {
-        const [key, value] = entry
-        if(key=="task")
-        {
-          cell = row.insertCell()
-          cell.innerHTML = value     
-          console.log(value)
-        }
-
-        else if(key=="status")
-        {
-          cell = row.insertCell()
-          if(value=="unfinished")
-          {
-            cell.innerHTML = "Not Started"
-            row.setAttribute("class","table-danger")
-          }
-          else if(value=="inprogress")
-          {
-            cell.innerHTML = "In progress"
-            row.setAttribute("class","table-warning")
-          }
-          else
-          {
-            cell.innerHTML = "Done"
-            row.setAttribute("class","table-success")
-          }
-
-        }
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token')
       })
-      cell = row.insertCell()
-      cell.innerHTML = " <button type=\"button\" onClick=\"TaskButton('inprogress', '"+element._id+"')\" class=\"btn btn-outline-primary\"><i class=\"bi bi-play-fill\"></i></button> <button type=\"button\" onClick=\"TaskButton('done', '"+element._id+"')\" class=\"btn btn-outline-success\"><i class=\"bi bi-check-lg\"></i></button> <button type=\"button\" onClick=\"TaskButton('delete', '"+element._id+"')\" class=\"btn btn-outline-danger\"><i class=\"bi bi-trash-fill\"></i></button>"
-      
-    })
-    taskTable.setAttribute("class","table");
-    taskTable.setAttribute("id","ttt");
-    tablehead.setAttribute("class","thead-dark")
-    document.getElementById("taskstableContainer").appendChild(taskTable);
-
-
+    }).then((res) => res.json())
+    await GenerateTable(result)
   }
 
   //To display all tasks -> end
+
+  //Get selected tasks -> start
+
+  function getSelectedTasks() {
+    selectedTasksList = document.getElementsByName("taskcheckbox")
+    var checkedIDlist = []
+    selectedTasksList.forEach(element => {
+      if (element.checked) {
+        checkedIDlist.push(element.getAttribute('id').slice(0, -3))
+      }
+    })
+    return checkedIDlist
+  }
+
+  async function completeSelectedTask() {
+    list = getSelectedTasks()
+    const result = await fetch('/operateonselected', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token'),
+        operation: "complete",
+        idlist: list
+      })
+    }).then((res) => res.json())
+    await displayAllTasks()
+  }
+
+  async function deleteSelectedTask() {
+    list = getSelectedTasks()
+    const result = await fetch('/operateonselected', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token'),
+        operation: "delete",
+        idlist: list
+      })
+    }).then((res) => res.json())
+    await displayAllTasks()
+  }
+
+  async function operateonall_complete() {
+    const result = await fetch('/operateonall', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token'),
+        operation: "complete",
+      })
+    }).then((res) => res.json())
+    displayAllTasks()
+  }
+
+  async function operateonall_delete() {
+    const result = await fetch('/operateonall', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token'),
+        operation: "delete",
+      })
+    }).then((res) => res.json())
+    displayAllTasks()
+  }
+
+  async function removeCompletedTasks() {
+    const result = await fetch('/operateonall', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        token: localStorage.getItem('token'),
+        operation: "deleteCompleted",
+      })
+    }).then((res) => res.json())
+    displayAllTasks()
+  }
+
+  //Get selected tasks -> end
 </script>
 <!DOCTYPE html>
 <html lang="en">
@@ -232,7 +361,6 @@
             <h6 class="my-3"> Email : <span name="email"></span></h6>
             <div class="fm-menu">
               <div class="list-group list-group-flush">
-                <div class="list-group-item py-1"> <i><a href="" class="btn btn-success">Edit Profile</a> </i></div>
                 <div class="list-group-item py-1"> <i><a class="btn btn-success" onclick="logout()">Logout</a> </i>
                 </div>
               </div>
@@ -254,7 +382,7 @@
               <div class="mb-0">
                 <div class="input-group input-group-lg"> <span class="input-group-text bg-transparent"><a class="btn"
                       onclick="searchTask()"><i class="fa fa-search"></i></a></span>
-                  <input type="text" class="form-control" placeholder="Search Tasks">
+                  <input id="searchbar" type="text" class="form-control" placeholder="Search Tasks">
                 </div>
               </div>
             </div>
@@ -270,9 +398,11 @@
                 </div>
                 <div class="d-inline-flex p-2 bd-highlight">
                   <div class="btn-group btn-group-sm" role="group" aria-label="Basic example">
-                   
-                    <button type="button" class="btn btn-success" data-toggle="modal" data-target="#AddTaskModal">Add New Task</button>
-                     <div class="modal fade" id="AddTaskModal" tabindex="-1" aria-labelledby="AddTaskModal" aria-hidden="true">
+
+                    <button type="button" class="btn btn-success" data-toggle="modal" data-target="#AddTaskModal">Add
+                      New Task</button>
+                    <div class="modal fade" id="AddTaskModal" tabindex="-1" aria-labelledby="AddTaskModal"
+                      aria-hidden="true">
                       <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
                         <div class="modal-content">
                           <div class="modal-header">
@@ -282,49 +412,47 @@
                             </button>
                           </div>
                           <form id="addtaskform">
-                          <div class="modal-body">
-                            
+                            <div class="modal-body">
+
                               <div class="input-group mb-3">
                                 <div class="input-group-prepend">
                                   <span class="input-group-text" id="basic-addon1">Required</span>
                                 </div>
-                                <input id="taskName" type="text" class="form-control" placeholder="Task Name" aria-label="Task Name" aria-describedby="basic-addon1" required />
+                                <input id="taskName" type="text" class="form-control" placeholder="Task Name"
+                                  aria-label="Task Name" aria-describedby="basic-addon1" required />
                               </div>
 
-                              <div class="input-group">
-                                <div class="input-group-prepend">
-                                  <span class="input-group-text">Optional</span>
-                                </div>
-                                <textarea id="taskDesc" class="form-control" placeholder="Task Description" aria-label="Task Description"></textarea>
-                              </div>
-                          
-                          </div>
-                          <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                            <button id="addtasksubmit" type="submit" class="btn btn-primary">Create Task</button>
-                          </div>
-                        </form>
+
+
+                            </div>
+                            <div class="modal-footer">
+                              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                              <button id="addtasksubmit" type="submit" class="btn btn-primary">Create Task</button>
+                            </div>
+                          </form>
                         </div>
                       </div>
                     </div>
                     <div class="btn-group btn-group-sm" role="group">
-                      <button id="btnGroupDrop1" type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      <button id="btnGroupDrop1" type="button" class="btn btn-primary dropdown-toggle"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         Complete Tasks
                       </button>
                       <div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
-                        <a class="dropdown-item" href="#">Selected Tasks</a>
-                        <a class="dropdown-item" href="#">All Tasks</a>
+                        <a class="dropdown-item" href="javascript:completeSelectedTask();">Selected Tasks</a>
+                        <a class="dropdown-item" href="javascript:operateonall_complete()">All Tasks</a>
                       </div>
                     </div>
 
                     <div class="btn-group btn-group-sm" role="group">
-                      <button id="btnGroupDrop1" type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      <button id="btnGroupDrop1" type="button" class="btn btn-danger dropdown-toggle"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         Remove Tasks
                       </button>
                       <div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
-                        <a class="dropdown-item" href="#">Completed Tasks</a>
-                        <a class="dropdown-item" href="#">Selected Tasks</a>
-                        <a class="dropdown-item" href="#">All Tasks</a>
+                        <a class="dropdown-item" href="javascript:removeCompletedTasks()">Completed Tasks</a>
+                        <a class="dropdown-item" href="javascript:deleteSelectedTask();">Selected Tasks</a>
+                        <a class="dropdown-item" href="javascript:operateonall_delete()">All Tasks</a>
                       </div>
                     </div>
 
@@ -335,7 +463,7 @@
             </div>
 
             <div id="taskstableContainer">
-            </div>            
+            </div>
           </div>
         </div>
       </div>
